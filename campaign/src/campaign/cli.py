@@ -1,0 +1,141 @@
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+from typing import Optional
+
+from .hafas_gate import HafasConfig, HafasGate
+from .poll import run_poll
+from .report import run_report
+from .subscribe import run_subscribe
+from .io import copy_file, redact_data
+
+
+def _build_hafas(args: argparse.Namespace) -> HafasGate:
+    config = HafasConfig(
+        base_url=args.base_url,
+        aid=args.aid,
+        user_id=args.user_id,
+        channel_id=args.channel_id,
+        lang=args.lang,
+        ver=args.ver,
+        hci_client_type=args.hci_client_type,
+        hci_client_version=args.hci_client_version,
+        hci_version=args.hci_version,
+        timeout_sec=args.timeout_sec,
+    )
+    return HafasGate(config)
+
+
+def _add_hafas_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--base-url", required=True, help="HAFAS /gate endpoint")
+    parser.add_argument("--aid", required=True, help="AID credential")
+    parser.add_argument("--user-id", required=True, help="External user id")
+    parser.add_argument("--channel-id", required=True, help="Channel/client id")
+    parser.add_argument("--lang", default="en")
+    parser.add_argument("--ver", default="1.16")
+    parser.add_argument("--hci-client-type", default="ANDROID")
+    parser.add_argument("--hci-client-version", default="1.0")
+    parser.add_argument("--hci-version", default="1.16")
+    parser.add_argument("--timeout-sec", type=int, default=30)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(prog="campaign")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    subscribe_parser = subparsers.add_parser("subscribe", help="Create subscriptions")
+    subscribe_parser.add_argument("--scenario", required=True, type=Path)
+    subscribe_parser.add_argument("--out-root", required=True, type=Path)
+    subscribe_parser.add_argument("--no-save-logs", action="store_true")
+    _add_hafas_args(subscribe_parser)
+
+    poll_parser = subparsers.add_parser("poll", help="Poll subscriptions for rtEvents")
+    poll_parser.add_argument("--run-dir", required=True, type=Path)
+    poll_parser.add_argument("--poll-sec", type=int, default=None)
+    poll_parser.add_argument("--pre-window-min", type=int, default=None)
+    poll_parser.add_argument("--post-window-min", type=int, default=None)
+    poll_parser.add_argument("--max-minutes", type=int, default=0)
+    poll_parser.add_argument("--include-raw", action="store_true")
+    poll_parser.add_argument("--no-save-logs", action="store_true")
+    _add_hafas_args(poll_parser)
+
+    sync_parser = subparsers.add_parser("sync-device-notifs", help="Copy device NDJSON into run folder")
+    sync_parser.add_argument("--run-dir", required=True, type=Path)
+    sync_parser.add_argument("--device-ndjson", required=True, type=Path)
+
+    report_parser = subparsers.add_parser("report", help="Generate report")
+    report_parser.add_argument("--run-dir", required=True, type=Path)
+    report_parser.add_argument("--device-ndjson", type=Path, default=None)
+    report_parser.add_argument("--out", type=Path, default=None)
+    report_parser.add_argument("--match-threshold", type=float, default=70.0)
+    report_parser.add_argument("--no-markdown", action="store_true")
+
+    search_parser = subparsers.add_parser("search", help="List active subscriptions")
+    _add_hafas_args(search_parser)
+
+    args = parser.parse_args()
+
+    if args.command == "subscribe":
+        hafas = _build_hafas(args)
+        run_dir = run_subscribe(
+            scenario_path=args.scenario,
+            out_root=args.out_root,
+            hafas=hafas,
+            save_logs=not args.no_save_logs,
+        )
+        print(run_dir)
+        return
+
+    if args.command == "poll":
+        hafas = _build_hafas(args)
+        scenario = (args.run_dir / "scenario.json").read_text(encoding="utf-8")
+        scenario_data = json.loads(scenario)
+        poll_sec = args.poll_sec or scenario_data.get("pollSec", 120)
+        pre_window_min = args.pre_window_min or scenario_data.get("preWindowMin", 10)
+        post_window_min = args.post_window_min or scenario_data.get("postWindowMin", 30)
+        max_runtime_min = args.max_minutes or scenario_data.get("maxRuntimeMin", 0)
+        run_poll(
+            run_dir=args.run_dir,
+            hafas=hafas,
+            poll_sec=poll_sec,
+            pre_window_min=pre_window_min,
+            post_window_min=post_window_min,
+            max_runtime_min=max_runtime_min,
+            include_raw=args.include_raw,
+            save_logs=not args.no_save_logs,
+        )
+        return
+
+    if args.command == "sync-device-notifs":
+        dest = args.run_dir / "device/notifications.ndjson"
+        copy_file(args.device_ndjson, dest)
+        print(dest)
+        return
+
+    if args.command == "report":
+        report_dir = run_report(
+            run_dir=args.run_dir,
+            device_ndjson=args.device_ndjson,
+            out_dir=args.out,
+            match_threshold=args.match_threshold,
+            write_markdown=not args.no_markdown,
+        )
+        print(report_dir)
+        return
+
+    if args.command == "search":
+        hafas = _build_hafas(args)
+        response, corr_id, _ = hafas.subscr_search()
+        secrets = {
+            hafas.config.aid: "<AID>",
+            hafas.config.user_id: "<USER_ID>",
+            hafas.config.channel_id: "<CHANNEL_ID>",
+        }
+        print(f"Correlation ID: {corr_id}")
+        print(redact_data(response, secrets))
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "campaign"
+version = "0.1.0"
+description = "HAFAS Notifications Campaign tooling"
+requires-python = ">=3.11"
+dependencies = [
+  "requests>=2.31.0",
+  "python-dateutil>=2.9.0",
+  "rapidfuzz>=3.9.0",
+]
+
+[project.scripts]
+campaign = "campaign.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -1,0 +1,17 @@
+{
+  "campaignName": "morning_peak",
+  "pollSec": 120,
+  "preWindowMin": 10,
+  "postWindowMin": 30,
+  "maxRuntimeMin": 240,
+  "items": [
+    {
+      "scenarioId": "nancy_lux_ter88576",
+      "beginDate": "20260205",
+      "endDate": "20260205",
+      "nPass": 1,
+      "hysteresis": { "notificationStart": 60, "minDeviationInterval": 5 },
+      "ctxRecon": "¶HKI¶T$A=1@O=...#¶KRCC¶#VE#1#"
+    }
+  ]
+}
