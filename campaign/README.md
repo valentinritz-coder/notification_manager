@@ -21,12 +21,16 @@ campaign/
 ```sh
 pkg update
 pkg install python git
+cd ~/.../<repo>/campaign
+mkdir -p ~/.venvs
+python -m venv ~/.venvs/hafas_campaign
+source ~/.venvs/hafas_campaign/bin/activate
 pip install -r requirements.txt
 pip install -e .
 python -c "import campaign; print('campaign import OK:', campaign.__file__)"
 ```
 
-**Quick workaround (no install):**
+**Quick workaround (no install, from the repo root):**
 
 ```sh
 export PYTHONPATH="$PWD/src"
@@ -35,7 +39,7 @@ python -m campaign.cli --help
 
 ### How to get the repo on Android (Termux)
 
-Termux home is under `~/` (not `/sdcard` by default). You can work in `~/repo` or `/sdcard/NOTIF` if you prefer shared storage.
+Termux home is under `~/` (not `/sdcard` by default). Keep the repo and virtualenv in `~/` so tools and Python packages are not on shared storage. Outputs are written to `/sdcard/NOTIF` for easy sharing/copying.
 
 **Option A — git clone (recommended for updates):**
 
@@ -60,13 +64,27 @@ unzip repo.zip
 
 ### Termux storage permission (required for /sdcard output)
 
-Before writing to `/sdcard`, run:
+Before writing outputs to `/sdcard/NOTIF`, run:
 
 ```sh
 termux-setup-storage
 ```
 
-This grants Termux access to shared storage.
+This grants Termux access to shared storage. Your code and venv stay in `~`.
+
+### Recommended layout
+
+```
+Repo:    ~/.../<repo>/campaign
+Venv:    ~/.venvs/hafas_campaign
+Outputs: /sdcard/NOTIF/campaigns/...
+```
+
+Optional convenience command:
+
+```sh
+source ~/.venvs/hafas_campaign/bin/activate
+```
 
 ## Install (PC)
 
@@ -122,6 +140,7 @@ export HAFAS_CHANNEL_ID="..."
 1. Subscribe:
 
 ```sh
+cd ~/.../<repo>/campaign
 python -m campaign.cli subscribe \
   --scenario ./examples/scenario_example.json \
   --out-root /sdcard/NOTIF/campaigns \
@@ -134,6 +153,7 @@ python -m campaign.cli subscribe \
 2. Poll (use the run dir printed by `subscribe`):
 
 ```sh
+cd ~/.../<repo>/campaign
 python -m campaign.cli poll \
   --run-dir /sdcard/NOTIF/campaigns/RUN_20260205_080000__morning_peak \
   --base-url "https://cfl.hafas.de/gate" \
