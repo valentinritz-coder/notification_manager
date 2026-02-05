@@ -52,9 +52,20 @@ def _load_events(run_dir: Path) -> List[Dict[str, Any]]:
 
 
 def _load_notifications(run_dir: Path, device_ndjson: Optional[Path]) -> List[Dict[str, Any]]:
-    if device_ndjson and device_ndjson.exists():
-        return read_ndjson(device_ndjson)
-    return read_ndjson(run_dir / "device/notifications.ndjson")
+    if device_ndjson is not None:
+        if device_ndjson.exists():
+            return read_ndjson(device_ndjson)
+        raise FileNotFoundError(
+            f"Device NDJSON not found at {device_ndjson}. "
+            "Provide --device-ndjson or run sync-device-notifs to populate the run folder."
+        )
+    default_path = run_dir / "device/notifications.ndjson"
+    if default_path.exists():
+        return read_ndjson(default_path)
+    raise FileNotFoundError(
+        f"Device NDJSON not found at {default_path}. "
+        "Provide --device-ndjson or run sync-device-notifs to populate the run folder."
+    )
 
 
 def _write_matches(path: Path, matches: List[MatchResult]) -> None:

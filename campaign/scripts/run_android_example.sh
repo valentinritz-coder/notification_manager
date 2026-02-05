@@ -3,7 +3,7 @@ set -e
 
 SCENARIO_PATH=../examples/scenario_example.json
 OUT_ROOT=/sdcard/NOTIF/campaigns
-BASE_URL="https://www.cfl.lu/gate"
+BASE_URL="https://cfl.hafas.de/gate"
 
 python -m campaign.cli subscribe \
   --scenario "$SCENARIO_PATH" \
