@@ -1,0 +1,54 @@
+termux-setup-storage
+
+
+pkg update
+pkg install python git
+
+
+
+cd ~
+git clone https://github.com/valentinritz-coder/notification_manager.git
+
+
+
+
+cd ~/notification_manager/campaign
+
+
+
+
+
+mkdir -p ~/.venvs
+python -m venv ~/.venvs/hafas_campaign
+source ~/.venvs/hafas_campaign/bin/activate
+
+python -m pip install -U pip
+pip install -r requirements.txt
+pip install -e .
+
+python -c "import campaign; print('campaign import OK:', campaign.__file__)"
+
+
+
+
+
+
+export HAFAS_AID="..."
+export HAFAS_USER_ID="..."
+export HAFAS_CHANNEL_ID="..."
+
+python -m campaign.cli subscribe \
+  --scenario ./examples/scenario_example.json \
+  --out-root /sdcard/NOTIF/campaigns \
+  --base-url "https://cfl.hafas.de/gate" \
+  --aid "$HAFAS_AID" \
+  --user-id "$HAFAS_USER_ID" \
+  --channel-id "$HAFAS_CHANNEL_ID"
+
+
+
+
+
+
+cd ~/notification_manager
+git pull
