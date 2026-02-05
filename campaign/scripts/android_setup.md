@@ -5,6 +5,8 @@
 pkg update
 pkg install python git
 pip install -r requirements.txt
+pip install -e .
+python -c "import campaign; print('campaign import OK:', campaign.__file__)"
 ```
 
 ## Filesystem permissions
@@ -17,4 +19,3 @@ Use an external logger (Tasker/AutoNotification or similar) to append NDJSON lin
 `/sdcard/NOTIF/device_notifications.ndjson`.
 
 Each line should follow the example in `campaign/examples/device_notifications_example.ndjson`.
-

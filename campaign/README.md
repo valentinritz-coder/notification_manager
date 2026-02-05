@@ -22,6 +22,67 @@ campaign/
 pkg update
 pkg install python git
 pip install -r requirements.txt
+pip install -e .
+python -c "import campaign; print('campaign import OK:', campaign.__file__)"
+```
+
+**Quick workaround (no install):**
+
+```sh
+export PYTHONPATH="$PWD/src"
+python -m campaign.cli --help
+```
+
+### How to get the repo on Android (Termux)
+
+Termux home is under `~/` (not `/sdcard` by default). You can work in `~/repo` or `/sdcard/NOTIF` if you prefer shared storage.
+
+**Option A — git clone (recommended for updates):**
+
+```sh
+pkg install git
+cd ~
+git clone <REPO_URL>
+```
+
+**Option B — download ZIP and extract:**
+
+```sh
+pkg install curl unzip
+cd ~
+curl -L -o repo.zip <ZIP_URL>
+unzip repo.zip
+```
+
+**Sync changes:**
+- If using git: `git pull`
+- If using ZIP: re-download and extract the latest archive.
+
+### Termux storage permission (required for /sdcard output)
+
+Before writing to `/sdcard`, run:
+
+```sh
+termux-setup-storage
+```
+
+This grants Termux access to shared storage.
+
+## Install (PC)
+
+```sh
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+pip install -e .
+python -c "import campaign; print('campaign import OK:', campaign.__file__)"
+```
+
+**Quick workaround (no install):**
+
+```sh
+export PYTHONPATH="$PWD/src"
+python -m campaign.cli --help
 ```
 
 ## Scenario format
@@ -50,16 +111,24 @@ See `examples/scenario_example.json` for a working template.
 
 ## Running a campaign (Android)
 
+Export credentials first to avoid leaking secrets in shell history:
+
+```sh
+export HAFAS_AID="..."
+export HAFAS_USER_ID="..."
+export HAFAS_CHANNEL_ID="..."
+```
+
 1. Subscribe:
 
 ```sh
 python -m campaign.cli subscribe \
   --scenario ./examples/scenario_example.json \
   --out-root /sdcard/NOTIF/campaigns \
-  --base-url "https://www.cfl.lu/gate" \
-  --aid "YOUR_AID" \
-  --user-id "YOUR_USER_ID" \
-  --channel-id "YOUR_CHANNEL_ID"
+  --base-url "https://cfl.hafas.de/gate" \
+  --aid "$HAFAS_AID" \
+  --user-id "$HAFAS_USER_ID" \
+  --channel-id "$HAFAS_CHANNEL_ID"
 ```
 
 2. Poll (use the run dir printed by `subscribe`):
@@ -67,10 +136,10 @@ python -m campaign.cli subscribe \
 ```sh
 python -m campaign.cli poll \
   --run-dir /sdcard/NOTIF/campaigns/RUN_20260205_080000__morning_peak \
-  --base-url "https://www.cfl.lu/gate" \
-  --aid "YOUR_AID" \
-  --user-id "YOUR_USER_ID" \
-  --channel-id "YOUR_CHANNEL_ID"
+  --base-url "https://cfl.hafas.de/gate" \
+  --aid "$HAFAS_AID" \
+  --user-id "$HAFAS_USER_ID" \
+  --channel-id "$HAFAS_CHANNEL_ID"
 ```
 
 ### Output layout
@@ -112,11 +181,30 @@ python -m campaign.cli sync-device-notifs \
 
 ## Report (PC)
 
+Device notifications can be provided either by:
+- Passing `--device-ndjson` directly, **or**
+- Running `sync-device-notifs` so the run folder contains `device/notifications.ndjson` (used automatically when `--device-ndjson` is omitted).
+
+```sh
+python -m campaign.cli report \
+  --run-dir ./campaign_runs/RUN_20260205_080000__morning_peak \
+  --match-threshold 70
+```
+
+Or with a direct path:
+
 ```sh
 python -m campaign.cli report \
   --run-dir ./campaign_runs/RUN_20260205_080000__morning_peak \
   --device-ndjson ./device_notifications.ndjson \
   --match-threshold 70
+```
+
+**Quick workaround (no install):**
+
+```sh
+export PYTHONPATH="$PWD/src"
+python -m campaign.cli report --run-dir ./campaign_runs/RUN_20260205_080000__morning_peak
 ```
 
 Outputs:
@@ -135,4 +223,3 @@ Outputs:
 - API calls are rate limited via `pollSec` with backoff outside the window.
 - Logs redact `aid`, `user_id`, and `channel_id` in saved request/response payloads.
 - Matching uses `rapidfuzz` if available, otherwise a fallback string similarity.
-
