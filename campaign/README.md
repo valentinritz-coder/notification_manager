@@ -7,6 +7,54 @@ This toolkit manages end-to-end notification campaigns for HAFAS subscriptions:
 3. Log device notifications externally (Tasker/AutoNotification) as NDJSON.
 4. Generate a report on a PC to match events to notifications and compute metrics.
 
+## Quickstart (Termux copy/paste)
+
+Use this block as-is in Termux. `HAFAS_CLIENT_ID` maps to the request payload `client.id` (HAFAS/CFL enum) and **must not** be the Android `ANDROID-xxxx` push channel id.
+
+```bash
+cd ~/notification_manager/campaign
+source ~/.venvs/hafas_campaign/bin/activate
+
+export HAFAS_BASE_URL="https://cfl.hafas.de/gate"
+export HAFAS_AID="ALT2vl7LAFDFu2dz"
+export HAFAS_USER_ID="user-22cae79f-0ccc-4959-a4e1-359a7004bb8f"
+export HAFAS_CHANNEL_ID="ANDROID-d9e8ac8a-a4a7-4c05-98db-edc648b974fc"
+# client.id enum used in the request envelope (NOT the ANDROID channel id)
+export HAFAS_CLIENT_ID="HAFAS"
+
+mkdir -p /sdcard/NOTIF/campaigns
+
+python -m campaign.cli subscribe \
+  --scenario ./examples/scenario_example.json \
+  --out-root /sdcard/NOTIF/campaigns \
+  --base-url "$HAFAS_BASE_URL" \
+  --aid "$HAFAS_AID" \
+  --user-id "$HAFAS_USER_ID" \
+  --channel-id "$HAFAS_CHANNEL_ID" \
+  --client-id "$HAFAS_CLIENT_ID"
+
+RUN_DIR="$(ls -td /sdcard/NOTIF/campaigns/RUN_* 2>/dev/null | head -n 1)"
+if [ -z "$RUN_DIR" ]; then
+  echo "No RUN_* folder found under /sdcard/NOTIF/campaigns" >&2
+  exit 1
+fi
+echo "Using run dir: $RUN_DIR"
+
+python -m campaign.cli poll \
+  --run-dir "$RUN_DIR" \
+  --base-url "$HAFAS_BASE_URL" \
+  --aid "$HAFAS_AID" \
+  --user-id "$HAFAS_USER_ID" \
+  --channel-id "$HAFAS_CHANNEL_ID" \
+  --client-id "$HAFAS_CLIENT_ID"
+```
+
+### Common mistakes
+
+- Don’t put the ANDROID-xxxx push channel id into `--client-id`.
+- `--hci-client-type` should be `AND` (not `ANDROID`).
+- `--client-id` is the HAFAS/CFL client enum (e.g., `HAFAS`, `CFL`).
+
 ## Structure
 
 ```
