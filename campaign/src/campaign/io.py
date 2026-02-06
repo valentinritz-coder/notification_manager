@@ -112,9 +112,13 @@ def update_state(
         {
             "seenKeys": sorted(set(seen_keys)),
             "lastPollUtc": utc_now_iso(),
-            "pollCount": poll_count,
         }
     )
+    # pollCount: do not overwrite with None
+    if poll_count is not None:
+        state["pollCount"] = poll_count
+    elif "pollCount" not in state:
+        state["pollCount"] = 0
     if last_activity_utc is not None:
         state["lastActivityUtc"] = last_activity_utc
     elif "lastActivityUtc" not in state:
