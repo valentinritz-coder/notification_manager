@@ -1,6 +1,6 @@
 {
   "campaignName": "morning_peak",
-  "pollSec": 120,
+  "pollSec": 60,
   "preWindowMin": 10,
   "postWindowMin": 10,
   "maxRuntimeMin": 240,
