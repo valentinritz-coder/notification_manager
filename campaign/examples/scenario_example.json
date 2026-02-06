@@ -6,12 +6,20 @@
   "maxRuntimeMin": 240,
   "items": [
     {
-      "scenarioId": "bus29_20",
+      "scenarioId": "bus33_20",
       "beginDate": "20260206",
       "endDate": "20260206",
       "nPass": 1,
       "hysteresis": { "notificationStart": 20, "minDeviationInterval": 5 },
-      "ctxRecon": "¶HKI¶T$A=1@O=Luxembourg@L=9217081@a=128@$A=1@O=KOBLENZ HBF (Germany)@L=8019023@a=128@$202602061233$202602061456$RE 5119$$3$$$$$$¶KC¶#VE#2#CF#100#CA#0#CM#0#SICT#0#AM#81#AM2#0#RT#15#¶KCC¶#VE#0#ERG#1#HIN#0#ECK#81418|81418|81554|81554|0|0|5|81417|1|0|2|0|0|-2147483648#¶KRCC¶#VE#1#VOLL#IST#"
+      "ctxRecon": "¶HKI¶T$A=1@O=Bambësch, Centre Sportif@L=200401001@a=128@$A=1@O=Howald, Waassertuerm@L=200304013@a=128@$202602061345$202602061424$Bus 33$$3$$$$$$¶KC¶#VE#2#CF#100#CA#0#CM#0#SICT#0#AM#81#AM2#0#RT#15#¶KCC¶#VE#0#ERG#8193#HIN#0#ECK#81467|81465|81504|81504|0|0|85|81465|1|0|2|0|0|-2147483648#¶KRCC¶#VE#1#"
+    },
+    {
+      "scenarioId": "bus413_20",
+      "beginDate": "20260206",
+      "endDate": "20260206",
+      "nPass": 1,
+      "hysteresis": { "notificationStart": 20, "minDeviationInterval": 5 },
+      "ctxRecon": "¶HKI¶T$A=1@O=Remich, rue de la Corniche@L=210701015@a=128@$A=1@O=Luxembourg, Gare Centrale routière@L=161601@a=128@$202602061330$202602061415$Bus 413$$1$$$$$$¶KC¶#VE#2#CF#100#CA#0#CM#0#SICT#0#AM#81#AM2#0#RT#15#¶KCC¶#VE#0#ERG#1#HIN#0#ECK#81450|81450|81495|81495|0|0|5|81450|1|0|2|0|0|-2147483648#¶KRCC¶#VE#1#"
     }
   ]
 }
