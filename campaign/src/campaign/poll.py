@@ -25,21 +25,61 @@ def _parse_dt(value: Optional[str]) -> Optional[datetime]:
     except (ValueError, TypeError):
         return None
 
+def _get_connection_info0(details: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    try:
+        res = details["svcResL"][0]["res"]
+    except Exception:
+        return None
+
+    # Preferred: SubscrDetails -> res.details.conSubscr.connectionInfo[0]
+    try:
+        ci = res["details"]["conSubscr"]["connectionInfo"][0]
+        if isinstance(ci, dict):
+            return ci
+    except Exception:
+        pass
+
+    # Fallback: legacy -> res.connectionInfo[0]
+    try:
+        ci = res["connectionInfo"][0]
+        if isinstance(ci, dict):
+            return ci
+    except Exception:
+        pass
+
+    return None
+
 
 def _extract_departure_time(details: Dict[str, Any]) -> Optional[datetime]:
-    try:
-        dep = details["svcResL"][0]["res"]["connectionInfo"][0]["departureTime"]
-        return _parse_dt(dep)
-    except (KeyError, IndexError, TypeError):
-        return None
+    ci0 = _get_connection_info0(details)
+    return _parse_dt(ci0.get("departureTime")) if ci0 else None
 
 
 def _extract_arrival_time(details: Dict[str, Any]) -> Optional[datetime]:
+    ci0 = _get_connection_info0(details)
+    return _parse_dt(ci0.get("arrivalTime")) if ci0 else None
+
+
+def _extract_rt_events(details: Dict[str, Any]) -> List[Dict[str, Any]]:
     try:
-        arr = details["svcResL"][0]["res"]["connectionInfo"][0]["arrivalTime"]
-        return _parse_dt(arr)
-    except (KeyError, IndexError, TypeError):
-        return None
+        res = details["svcResL"][0]["res"]
+    except Exception:
+        return []
+
+    # Preferred: SubscrDetails -> res.details.eventHistory.rtEvents
+    try:
+        eh = res["details"]["eventHistory"]
+        rt = eh.get("rtEvents") or []
+        return rt if isinstance(rt, list) else []
+    except Exception:
+        pass
+
+    # Fallback legacy: res.rtInfo.rtEventL
+    try:
+        rt = (res.get("rtInfo") or {}).get("rtEventL") or []
+        return rt if isinstance(rt, list) else []
+    except Exception:
+        return []
 
 
 def _compute_planned_end(details: Dict[str, Any], post_window_min: int) -> Optional[datetime]:
@@ -49,13 +89,6 @@ def _compute_planned_end(details: Dict[str, Any], post_window_min: int) -> Optio
     if not base:
         return None
     return base + timedelta(minutes=post_window_min)
-
-
-def _extract_rt_events(details: Dict[str, Any]) -> List[Dict[str, Any]]:
-    try:
-        return details["svcResL"][0]["res"]["rtInfo"]["rtEventL"] or []
-    except (KeyError, IndexError, TypeError):
-        return []
 
 
 def _event_key(event: Dict[str, Any]) -> str:
