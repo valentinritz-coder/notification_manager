@@ -13,6 +13,7 @@ Use this block as-is in Termux. `HAFAS_CLIENT_ID` maps to the request payload `c
 
 ```bash
 cd ~/notification_manager/campaign
+git pull
 source ~/.venvs/hafas_campaign/bin/activate
 
 export HAFAS_BASE_URL="https://cfl.hafas.de/gate"
