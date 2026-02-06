@@ -161,6 +161,7 @@ See `examples/scenario_example.json` for a working template.
   "pollSec": 120,
   "preWindowMin": 10,
   "postWindowMin": 30,
+  "idleGraceMin": 15,
   "maxRuntimeMin": 240,
   "items": [
     {
@@ -209,6 +210,7 @@ python -m campaign.cli subscribe \
 cd ~/.../<repo>/campaign
 python -m campaign.cli poll \
   --run-dir /sdcard/NOTIF/campaigns/RUN_20260205_080000__morning_peak \
+  --idle-grace-min 15 \
   --base-url "https://cfl.hafas.de/gate" \
   --aid "$HAFAS_AID" \
   --user-id "$HAFAS_USER_ID" \
@@ -336,6 +338,8 @@ Outputs:
 ## Notes
 
 - API calls are rate limited via `pollSec` with backoff outside the window.
+- Polling stops per subscription once the planned arrival window ends and no new RT activity
+  has been observed for `idleGraceMin` minutes.
 - Logs redact `aid`, `user_id`, and `channel_id` in saved request/response payloads.
 - Matching uses `rapidfuzz` if available, otherwise a fallback string similarity.
 - Notification `id` is a stable identifier for update detection, not a global event id.

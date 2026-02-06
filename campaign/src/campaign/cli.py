@@ -68,6 +68,7 @@ def main() -> None:
     poll_parser.add_argument("--poll-sec", type=int, default=None)
     poll_parser.add_argument("--pre-window-min", type=int, default=None)
     poll_parser.add_argument("--post-window-min", type=int, default=None)
+    poll_parser.add_argument("--idle-grace-min", type=int, default=15)
     poll_parser.add_argument("--max-minutes", type=int, default=0)
     poll_parser.add_argument("--include-raw", action="store_true")
     poll_parser.add_argument("--no-save-logs", action="store_true")
@@ -125,6 +126,7 @@ def main() -> None:
         poll_sec = args.poll_sec or scenario_data.get("pollSec", 120)
         pre_window_min = args.pre_window_min or scenario_data.get("preWindowMin", 10)
         post_window_min = args.post_window_min or scenario_data.get("postWindowMin", 30)
+        idle_grace_min = scenario_data.get("idleGraceMin", args.idle_grace_min)
         max_runtime_min = args.max_minutes or scenario_data.get("maxRuntimeMin", 0)
         run_poll(
             run_dir=args.run_dir,
@@ -132,6 +134,7 @@ def main() -> None:
             poll_sec=poll_sec,
             pre_window_min=pre_window_min,
             post_window_min=post_window_min,
+            idle_grace_min=idle_grace_min,
             max_runtime_min=max_runtime_min,
             include_raw=args.include_raw,
             save_logs=not args.no_save_logs,
