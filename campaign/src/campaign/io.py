@@ -85,15 +85,46 @@ def copy_file(src: Path, dest: Path) -> None:
 def ensure_state(path: Path) -> Dict[str, Any]:
     if path.exists():
         return read_json(path)
-    state = {"seenKeys": [], "lastPollUtc": None, "pollCount": 2}
+    state = {
+        "seenKeys": [],
+        "lastPollUtc": None,
+        "pollCount": 2,
+        "lastActivityUtc": None,
+        "plannedEndUtc": None,
+        "done": False,
+    }
     write_json(path, state)
     return state
 
 
-def update_state(path: Path, seen_keys: Iterable[str], poll_count: int | None = None) -> None:
-    state = {
-        "seenKeys": sorted(set(seen_keys)),
-        "lastPollUtc": utc_now_iso(),
-        "pollCount": poll_count,
-    }
+def update_state(
+    path: Path,
+    seen_keys: Iterable[str],
+    poll_count: int | None = None,
+    last_activity_utc: str | None = None,
+    planned_end_utc: str | None = None,
+    done: bool | None = None,
+) -> None:
+    state: Dict[str, Any] = {}
+    if path.exists():
+        state = read_json(path)
+    state.update(
+        {
+            "seenKeys": sorted(set(seen_keys)),
+            "lastPollUtc": utc_now_iso(),
+            "pollCount": poll_count,
+        }
+    )
+    if last_activity_utc is not None:
+        state["lastActivityUtc"] = last_activity_utc
+    elif "lastActivityUtc" not in state:
+        state["lastActivityUtc"] = None
+    if planned_end_utc is not None:
+        state["plannedEndUtc"] = planned_end_utc
+    elif "plannedEndUtc" not in state:
+        state["plannedEndUtc"] = None
+    if done is not None:
+        state["done"] = done
+    elif "done" not in state:
+        state["done"] = False
     write_json(path, state)

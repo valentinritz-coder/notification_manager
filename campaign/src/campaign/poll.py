@@ -34,6 +34,23 @@ def _extract_departure_time(details: Dict[str, Any]) -> Optional[datetime]:
         return None
 
 
+def _extract_arrival_time(details: Dict[str, Any]) -> Optional[datetime]:
+    try:
+        arr = details["svcResL"][0]["res"]["connectionInfo"][0]["arrivalTime"]
+        return _parse_dt(arr)
+    except (KeyError, IndexError, TypeError):
+        return None
+
+
+def _compute_planned_end(details: Dict[str, Any], post_window_min: int) -> Optional[datetime]:
+    arrival = _extract_arrival_time(details)
+    departure = _extract_departure_time(details)
+    base = arrival or departure
+    if not base:
+        return None
+    return base + timedelta(minutes=post_window_min)
+
+
 def _extract_rt_events(details: Dict[str, Any]) -> List[Dict[str, Any]]:
     try:
         return details["svcResL"][0]["res"]["rtInfo"]["rtEventL"] or []
@@ -82,6 +99,7 @@ def run_poll(
     poll_sec: int,
     pre_window_min: int,
     post_window_min: int,
+    idle_grace_min: int = 15,
     max_runtime_min: int = 0,
     include_raw: bool = False,
     save_logs: bool = True,
@@ -135,7 +153,10 @@ def run_poll(
         next_due = time.monotonic() + max(0.0, float(after_sec))
         heapq.heappush(heap, (next_due, idx, subscr_dir))
 
+    # Changelog: add dynamic idle grace stop logic after planned arrival windows.
     while True:
+        if not heap:
+            break
         if _deadline_reached():
             break
 
@@ -164,8 +185,12 @@ def run_poll(
 
         state_path = poll_state_dir / "state.json"
         state = ensure_state(state_path)
+        if state.get("done"):
+            continue
         seen_keys = set(state.get("seenKeys", []))
         poll_count = int(state.get("pollCount") or 0)
+        last_activity = _parse_dt(state.get("lastActivityUtc"))
+        planned_end_state = _parse_dt(state.get("plannedEndUtc"))
 
         # --- Call HAFAS safely ---
         try:
@@ -193,11 +218,14 @@ def run_poll(
                 pass
 
         now = datetime.now(timezone.utc)
+        arr_time = _extract_arrival_time(details)
         dep_time = _extract_departure_time(details)
+        planned_end = _compute_planned_end(details, post_window_min) or planned_end_state
+        planned_end_utc = planned_end.astimezone(timezone.utc).isoformat() if planned_end else None
 
         if dep_time:
             window_start = dep_time - timedelta(minutes=pre_window_min)
-            window_end = dep_time + timedelta(minutes=post_window_min)
+            window_end = (arr_time or dep_time) + timedelta(minutes=post_window_min)
             in_window = window_start <= now <= window_end
         else:
             in_window = False
@@ -205,6 +233,7 @@ def run_poll(
         # If dep_time is unknown, keep polling normally and still harvest events.
         process_events = in_window or dep_time is None
 
+        activity = False
         if process_events:
             events = _extract_rt_events(details)
             ts_poll_utc = now.isoformat()
@@ -221,9 +250,32 @@ def run_poll(
 
             if normalized_rows:
                 append_ndjson(poll_state_dir / "rt_events.ndjson", normalized_rows)
+                activity = True
+
+        if activity:
+            last_activity = now
+        elif last_activity is None:
+            if in_window:
+                last_activity = now
+            elif planned_end:
+                last_activity = start_time
 
         poll_count += 1
-        update_state(state_path, seen_keys, poll_count=poll_count)
+        done = False
+        if planned_end and last_activity:
+            idle_deadline = last_activity + timedelta(minutes=idle_grace_min)
+            if now > planned_end and now > idle_deadline:
+                done = True
+        update_state(
+            state_path,
+            seen_keys,
+            poll_count=poll_count,
+            last_activity_utc=last_activity.isoformat() if last_activity else None,
+            planned_end_utc=planned_end_utc,
+            done=done,
+        )
+        if done:
+            continue
 
         # --- Reschedule this subscription ---
         # Keep your behavior: slower outside window (x2, capped at 15 min).
@@ -243,4 +295,3 @@ def run_poll(
 
         if _deadline_reached():
             break
-
