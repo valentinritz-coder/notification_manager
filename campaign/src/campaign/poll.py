@@ -8,15 +8,57 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from zoneinfo import ZoneInfo
-
 from dateutil import parser as dt_parser
-
 from .hafas_gate import HafasGate
 from .io import append_ndjson, ensure_dir, ensure_state, read_json, update_state, write_json_redacted
 
+try:
+    from zoneinfo import ZoneInfo
 
-DEFAULT_TZ = ZoneInfo("Europe/Luxembourg")
+    def _load_local_tz():
+        for name in ("Europe/Paris", "Europe/Brussels", "Europe/Luxembourg"):
+            try:
+                return ZoneInfo(name)
+            except Exception:
+                pass
+        # dernier recours (mauvais en été, mais mieux que planter)
+        return timezone(timedelta(hours=1))
 
+    LOCAL_TZ = _load_local_tz()
+
+except Exception:
+    # fallback si zoneinfo vraiment indispo
+    from dateutil.tz import gettz
+    LOCAL_TZ = gettz("Europe/Paris") or timezone(timedelta(hours=1))
+
+
+def _parse_hafas_wallclock_to_utc(value: Optional[str]) -> Optional[datetime]:
+    """
+    HAFAS dep/arr timestamps: treat as local wall-clock time even if suffixed with 'Z'.
+    Return UTC datetime for comparisons/storage.
+    """
+    if not value:
+        return None
+    try:
+        s = value.strip()
+        dt = dt_parser.isoparse(s)
+
+        # If it has no tz -> local
+        if dt.tzinfo is None:
+            local = dt.replace(tzinfo=LOCAL_TZ)
+
+        # If it says Z/+00:00 but is actually local -> IGNORE TZ and reattach local
+        elif s.endswith("Z") or s.endswith("+00:00"):
+            local = dt.replace(tzinfo=None).replace(tzinfo=LOCAL_TZ)
+
+        # Otherwise trust provided offset
+        else:
+            local = dt.astimezone(LOCAL_TZ)
+
+        return local.astimezone(timezone.utc)
+    except Exception:
+        return None
+        
 def _parse_dt(value: Optional[str]) -> Optional[datetime]:
     if not value:
         return None
@@ -77,13 +119,11 @@ def _get_connection_info0(details: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 
 def _extract_departure_time(details: Dict[str, Any]) -> Optional[datetime]:
     ci0 = _get_connection_info0(details)
-    return _parse_dt(ci0.get("departureTime")) if ci0 else None
-
+    return _parse_hafas_wallclock_to_utc(ci0.get("departureTime")) if ci0 else None
 
 def _extract_arrival_time(details: Dict[str, Any]) -> Optional[datetime]:
     ci0 = _get_connection_info0(details)
-    return _parse_dt(ci0.get("arrivalTime")) if ci0 else None
-
+    return _parse_hafas_wallclock_to_utc(ci0.get("arrivalTime")) if ci0 else None
 
 def _extract_rt_events(details: Dict[str, Any]) -> List[Dict[str, Any]]:
     try:
