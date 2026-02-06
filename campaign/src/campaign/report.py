@@ -216,3 +216,26 @@ def _render_markdown(summary: Dict[str, Any]) -> str:
         f"- P95: {summary['latency']['p95']:.1f}s",
     ]
     return "\n".join(lines) + "\n"
+
+def main() -> None:
+    import argparse
+    from pathlib import Path
+
+    ap = argparse.ArgumentParser(description="Generate campaign report")
+    ap.add_argument("--run-dir", required=True)
+    ap.add_argument("--device-ndjson", default=None)
+    ap.add_argument("--out-dir", default=None)
+    ap.add_argument("--match-threshold", type=float, default=70.0)
+    ap.add_argument("--no-markdown", action="store_true")
+    args = ap.parse_args()
+
+    run_report(
+        run_dir=Path(args.run_dir),
+        device_ndjson=Path(args.device_ndjson) if args.device_ndjson else None,
+        out_dir=Path(args.out_dir) if args.out_dir else None,
+        match_threshold=args.match_threshold,
+        write_markdown=not args.no_markdown,
+    )
+
+if __name__ == "__main__":
+    main()
