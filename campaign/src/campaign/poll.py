@@ -31,6 +31,61 @@ except Exception:
     from dateutil.tz import gettz
     LOCAL_TZ = gettz("Europe/Paris") or timezone(timedelta(hours=1))
 
+LOCAL_TZ_NAME = getattr(LOCAL_TZ, "key", "Europe/Paris")
+
+
+def _iso_utc(value: Optional[datetime]) -> Optional[str]:
+    if not value:
+        return None
+    return value.astimezone(timezone.utc).isoformat()
+
+
+def _iso_local(value: Optional[datetime]) -> Optional[str]:
+    if not value:
+        return None
+    return value.astimezone(LOCAL_TZ).isoformat()
+
+
+def _iso_time_part(iso_value: Optional[str]) -> str:
+    if not iso_value:
+        return "--:--:--"
+    time_part = iso_value.split("T")[-1]
+    for sep in ("+", "-", "Z"):
+        if sep in time_part:
+            time_part = time_part.split(sep)[0]
+    return time_part
+
+
+def _format_console_line(record: Dict[str, Any]) -> str:
+    ts_utc = _iso_time_part(record.get("tsUtc"))
+    ts_local = _iso_time_part(record.get("tsLocal"))
+    return (
+        f"[UTC {ts_utc} | Local {ts_local}] "
+        f"subscr={record.get('subscrId')} scen={record.get('scenarioId')} "
+        f"poll={record.get('pollCount')} in_window={record.get('in_window')} "
+        f"new_events={record.get('new_events')} interval={record.get('interval_sec')}s "
+        f"done={record.get('done')}"
+    )
+
+
+def _log_poll_event(subscr_dir: Path, record: Dict[str, Any], verbose: bool, save_logs: bool) -> None:
+    if save_logs:
+        try:
+            append_ndjson(subscr_dir / "poll" / "poll_log.ndjson", [record])
+        except Exception:
+            pass
+    if verbose:
+        print(_format_console_line(record))
+
+
+def _log_major(message: str) -> None:
+    print(message)
+
+
+def _short_error_message(exc: Exception, limit: int = 200) -> str:
+    msg = str(exc) or exc.__class__.__name__
+    return msg[:limit]
+
 
 def _parse_hafas_wallclock_to_utc(value: Optional[str]) -> Optional[datetime]:
     """
@@ -201,18 +256,27 @@ def run_poll(
     max_runtime_min: int = 0,
     include_raw: bool = False,
     save_logs: bool = True,
+    verbose: bool = False,
 ) -> None:
     subs_dir = run_dir / "subs"
     if not subs_dir.exists():
         # Rien à poll
+        _log_major(f"No subs directory found under {run_dir}")
         return
 
     subscr_dirs = sorted([p for p in subs_dir.iterdir() if p.is_dir()])
     if not subscr_dirs:
+        _log_major(f"No subscriptions found under {subs_dir}")
         return
 
     start_time = datetime.now(timezone.utc)
     deadline = start_time + timedelta(minutes=max_runtime_min) if max_runtime_min else None
+    _log_major(
+        f"Polling {len(subscr_dirs)} subscriptions from {run_dir} "
+        f"(pollSec={poll_sec}, preWindowMin={pre_window_min}, postWindowMin={post_window_min}, "
+        f"idleGraceMin={idle_grace_min}, maxRuntimeMin={max_runtime_min}, "
+        f"localTz={LOCAL_TZ_NAME})"
+    )
 
     # Scheduler: each subscription has its own next_due (monotonic seconds).
     # Initial staggering spreads the first round across poll_sec to avoid bursts.
@@ -257,7 +321,6 @@ def run_poll(
             break
         if _deadline_reached():
             break
-
         due_mono, idx, subscr_dir = heapq.heappop(heap)
         if not _sleep_until(due_mono):
             break
@@ -267,6 +330,46 @@ def run_poll(
             manifest = read_json(subscr_dir / "manifest.json")
         except Exception:
             # Pas de manifest -> on réessaie plus tard (et on évite de tuer tout le poll)
+            now = datetime.now(timezone.utc)
+            _log_major(f"WARN: missing manifest for {subscr_dir} (backoff)")
+            _log_poll_event(
+                subscr_dir,
+                {
+                    "tsUtc": _iso_utc(now),
+                    "tsLocal": _iso_local(now),
+                    "subscrId": None,
+                    "scenarioId": None,
+                    "pollCount": None,
+                    "in_window": None,
+                    "window_start_utc": None,
+                    "window_start_local": None,
+                    "window_end_utc": None,
+                    "window_end_local": None,
+                    "dep_time_utc": None,
+                    "dep_time_local": None,
+                    "arr_time_utc": None,
+                    "arr_time_local": None,
+                    "planned_end_utc": None,
+                    "planned_end_local": None,
+                    "last_activity_utc": None,
+                    "last_activity_local": None,
+                    "idle_deadline_utc": None,
+                    "idle_deadline_local": None,
+                    "interval_sec": min(poll_sec * 2, 900),
+                    "next_due_monotonic": None,
+                    "next_due_utc": None,
+                    "events_total": 0,
+                    "new_events": 0,
+                    "dedup_skipped": 0,
+                    "done": False,
+                    "done_reason": "missing_manifest",
+                    "error_type": "manifest_read_error",
+                    "error_msg": "missing manifest.json",
+                    "where": "read_manifest",
+                },
+                verbose,
+                save_logs,
+            )
             _reschedule(idx, subscr_dir, min(poll_sec * 2, 900))
             continue
 
@@ -275,6 +378,46 @@ def run_poll(
 
         if not subscr_id:
             # Sub sans subscrId -> on réessaie plus tard
+            now = datetime.now(timezone.utc)
+            _log_major(f"WARN: missing subscrId for {subscr_dir} (backoff)")
+            _log_poll_event(
+                subscr_dir,
+                {
+                    "tsUtc": _iso_utc(now),
+                    "tsLocal": _iso_local(now),
+                    "subscrId": None,
+                    "scenarioId": scenario_id,
+                    "pollCount": None,
+                    "in_window": None,
+                    "window_start_utc": None,
+                    "window_start_local": None,
+                    "window_end_utc": None,
+                    "window_end_local": None,
+                    "dep_time_utc": None,
+                    "dep_time_local": None,
+                    "arr_time_utc": None,
+                    "arr_time_local": None,
+                    "planned_end_utc": None,
+                    "planned_end_local": None,
+                    "last_activity_utc": None,
+                    "last_activity_local": None,
+                    "idle_deadline_utc": None,
+                    "idle_deadline_local": None,
+                    "interval_sec": min(poll_sec * 2, 900),
+                    "next_due_monotonic": None,
+                    "next_due_utc": None,
+                    "events_total": 0,
+                    "new_events": 0,
+                    "dedup_skipped": 0,
+                    "done": False,
+                    "done_reason": "missing_subscr_id",
+                    "error_type": "missing_subscr_id",
+                    "error_msg": "manifest without subscrId",
+                    "where": "read_manifest",
+                },
+                verbose,
+                save_logs,
+            )
             _reschedule(idx, subscr_dir, min(poll_sec * 2, 900))
             continue
 
@@ -282,7 +425,51 @@ def run_poll(
         ensure_dir(poll_state_dir)
 
         state_path = poll_state_dir / "state.json"
-        state = ensure_state(state_path)
+        try:
+            state = ensure_state(state_path)
+        except Exception as exc:
+            now = datetime.now(timezone.utc)
+            _log_major(f"ERROR: failed to read state for {subscr_dir} (backoff)")
+            _log_poll_event(
+                subscr_dir,
+                {
+                    "tsUtc": _iso_utc(now),
+                    "tsLocal": _iso_local(now),
+                    "subscrId": subscr_id,
+                    "scenarioId": scenario_id,
+                    "pollCount": None,
+                    "in_window": None,
+                    "window_start_utc": None,
+                    "window_start_local": None,
+                    "window_end_utc": None,
+                    "window_end_local": None,
+                    "dep_time_utc": None,
+                    "dep_time_local": None,
+                    "arr_time_utc": None,
+                    "arr_time_local": None,
+                    "planned_end_utc": None,
+                    "planned_end_local": None,
+                    "last_activity_utc": None,
+                    "last_activity_local": None,
+                    "idle_deadline_utc": None,
+                    "idle_deadline_local": None,
+                    "interval_sec": min(poll_sec * 2, 900),
+                    "next_due_monotonic": None,
+                    "next_due_utc": None,
+                    "events_total": 0,
+                    "new_events": 0,
+                    "dedup_skipped": 0,
+                    "done": False,
+                    "done_reason": "state_read_error",
+                    "error_type": exc.__class__.__name__,
+                    "error_msg": _short_error_message(exc),
+                    "where": "ensure_state",
+                },
+                verbose,
+                save_logs,
+            )
+            _reschedule(idx, subscr_dir, min(poll_sec * 2, 900))
+            continue
         if state.get("done"):
             continue
         seen_keys = set(state.get("seenKeys", []))
@@ -293,8 +480,48 @@ def run_poll(
         # --- Call HAFAS safely ---
         try:
             details, corr_id, request_payload = hafas.subscr_details(subscr_id)
-        except Exception:
+        except Exception as exc:
             # Réseau/500/timeout: on backoff sans tout arrêter
+            now = datetime.now(timezone.utc)
+            _log_major(f"ERROR: poll failed for subscr {subscr_id} (backoff)")
+            _log_poll_event(
+                subscr_dir,
+                {
+                    "tsUtc": _iso_utc(now),
+                    "tsLocal": _iso_local(now),
+                    "subscrId": subscr_id,
+                    "scenarioId": scenario_id,
+                    "pollCount": poll_count,
+                    "in_window": None,
+                    "window_start_utc": None,
+                    "window_start_local": None,
+                    "window_end_utc": None,
+                    "window_end_local": None,
+                    "dep_time_utc": None,
+                    "dep_time_local": None,
+                    "arr_time_utc": None,
+                    "arr_time_local": None,
+                    "planned_end_utc": _iso_utc(planned_end_state),
+                    "planned_end_local": _iso_local(planned_end_state),
+                    "last_activity_utc": _iso_utc(last_activity),
+                    "last_activity_local": _iso_local(last_activity),
+                    "idle_deadline_utc": None,
+                    "idle_deadline_local": None,
+                    "interval_sec": min(poll_sec * 2, 900),
+                    "next_due_monotonic": None,
+                    "next_due_utc": None,
+                    "events_total": 0,
+                    "new_events": 0,
+                    "dedup_skipped": 0,
+                    "done": False,
+                    "done_reason": "network_error_backoff",
+                    "error_type": exc.__class__.__name__,
+                    "error_msg": _short_error_message(exc),
+                    "where": "subscr_details",
+                },
+                verbose,
+                save_logs,
+            )
             _reschedule(idx, subscr_dir, min(poll_sec * 2, 900))
             continue
 
@@ -319,7 +546,7 @@ def run_poll(
         arr_time = _extract_arrival_time(details)
         dep_time = _extract_departure_time(details)
         planned_end = _compute_planned_end(details, post_window_min) or planned_end_state
-        planned_end_utc = planned_end.astimezone(timezone.utc).isoformat() if planned_end else None
+        planned_end_utc = _iso_utc(planned_end)
 
         if dep_time:
             window_start = dep_time - timedelta(minutes=pre_window_min)
@@ -355,12 +582,15 @@ def run_poll(
 
         poll_count += 1
         done = False
+        done_reason = None
+        idle_deadline = None
         if planned_end:
             if last_activity is None:
                 last_activity = planned_end
             idle_deadline = last_activity + timedelta(minutes=idle_grace_min)
             if now > planned_end and now > idle_deadline:
                 done = True
+                done_reason = "idle_grace_elapsed"
         update_state(
             state_path,
             seen_keys,
@@ -369,17 +599,15 @@ def run_poll(
             planned_end_utc=planned_end_utc,
             done=done,
             extra_fields={
-                "dep_time": dep_time.astimezone(timezone.utc).isoformat() if dep_time else None,
-                "arr_time": arr_time.astimezone(timezone.utc).isoformat() if arr_time else None,
-                "window_start": window_start.astimezone(timezone.utc).isoformat() if window_start else None,
-                "window_end": window_end.astimezone(timezone.utc).isoformat() if window_end else None,
+                "dep_time": _iso_utc(dep_time),
+                "arr_time": _iso_utc(arr_time),
+                "window_start": _iso_utc(window_start),
+                "window_end": _iso_utc(window_end),
                 "in_window": in_window,
             },
         )
-        if done:
-            continue
-
-        # --- Reschedule this subscription ---
+        interval = None
+        next_due = None
         if dep_time is None:
             interval = float(poll_sec)
         else:
@@ -389,15 +617,64 @@ def run_poll(
                 interval = float(poll_sec)
             else:
                 interval = float(min(poll_sec * 2, 900))
-
         next_due = due_mono + interval
-
-        # If we fell behind (slow network), don't schedule in the past.
         now_mono = time.monotonic()
         if next_due < now_mono:
             next_due = now_mono
+        next_due_utc = now + timedelta(seconds=interval)
 
+        _log_poll_event(
+            subscr_dir,
+            {
+                "tsUtc": _iso_utc(now),
+                "tsLocal": _iso_local(now),
+                "subscrId": subscr_id,
+                "scenarioId": scenario_id,
+                "pollCount": poll_count,
+                "in_window": in_window,
+                "window_start_utc": _iso_utc(window_start),
+                "window_start_local": _iso_local(window_start),
+                "window_end_utc": _iso_utc(window_end),
+                "window_end_local": _iso_local(window_end),
+                "dep_time_utc": _iso_utc(dep_time),
+                "dep_time_local": _iso_local(dep_time),
+                "arr_time_utc": _iso_utc(arr_time),
+                "arr_time_local": _iso_local(arr_time),
+                "planned_end_utc": _iso_utc(planned_end),
+                "planned_end_local": _iso_local(planned_end),
+                "last_activity_utc": _iso_utc(last_activity),
+                "last_activity_local": _iso_local(last_activity),
+                "idle_deadline_utc": _iso_utc(idle_deadline),
+                "idle_deadline_local": _iso_local(idle_deadline),
+                "interval_sec": interval,
+                "next_due_monotonic": next_due,
+                "next_due_utc": _iso_utc(next_due_utc),
+                "events_total": len(events),
+                "new_events": len(normalized_rows),
+                "dedup_skipped": len(events) - len(normalized_rows),
+                "done": done,
+                "done_reason": done_reason or ("completed" if done else "running"),
+                "error_type": None,
+                "error_msg": None,
+                "where": None,
+            },
+            verbose,
+            save_logs,
+        )
+        if done:
+            _log_major(
+                f"Done: subscr={subscr_id} scen={scenario_id} "
+                f"reason={done_reason or 'completed'}"
+            )
+            continue
+
+        # --- Reschedule this subscription ---
         heapq.heappush(heap, (next_due, idx, subscr_dir))
 
         if _deadline_reached():
             break
+
+    if _deadline_reached():
+        _log_major("Polling stopped: deadline_reached")
+    elif not heap:
+        _log_major("Polling stopped: no_pending_subscriptions")
