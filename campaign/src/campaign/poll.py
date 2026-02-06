@@ -87,8 +87,11 @@ def run_poll(
     save_logs: bool = True,
 ) -> None:
     subs_dir = run_dir / "subs"
-    subscr_dirs = sorted([p for p in subs_dir.iterdir() if p.is_dir()])
+    if not subs_dir.exists():
+        # Rien à poll
+        return
 
+    subscr_dirs = sorted([p for p in subs_dir.iterdir() if p.is_dir()])
     if not subscr_dirs:
         return
 
@@ -106,10 +109,13 @@ def run_poll(
     for i, d in enumerate(subscr_dirs):
         heapq.heappush(heap, (base + i * slot, i, d))
 
+    def _deadline_reached() -> bool:
+        return bool(deadline and datetime.now(timezone.utc) >= deadline)
+
     def _sleep_until(due_mono: float) -> bool:
         """Sleep until due_mono or until deadline. Returns False if deadline reached."""
         while True:
-            if deadline and datetime.now(timezone.utc) >= deadline:
+            if _deadline_reached():
                 return False
             now_mono = time.monotonic()
             wait = due_mono - now_mono
@@ -124,17 +130,34 @@ def run_poll(
             else:
                 time.sleep(wait)
 
+    def _reschedule(idx: int, subscr_dir: Path, after_sec: float) -> None:
+        """Reschedule a subscription after after_sec seconds (monotonic)."""
+        next_due = time.monotonic() + max(0.0, float(after_sec))
+        heapq.heappush(heap, (next_due, idx, subscr_dir))
+
     while True:
-        if deadline and datetime.now(timezone.utc) >= deadline:
+        if _deadline_reached():
             break
 
         due_mono, idx, subscr_dir = heapq.heappop(heap)
         if not _sleep_until(due_mono):
             break
 
-        manifest = read_json(subscr_dir / "manifest.json")
+        # --- Read manifest safely ---
+        try:
+            manifest = read_json(subscr_dir / "manifest.json")
+        except Exception:
+            # Pas de manifest -> on réessaie plus tard (et on évite de tuer tout le poll)
+            _reschedule(idx, subscr_dir, min(poll_sec * 2, 900))
+            continue
+
         subscr_id = manifest.get("subscrId")
         scenario_id = manifest.get("scenarioId", "unknown")
+
+        if not subscr_id:
+            # Sub sans subscrId -> on réessaie plus tard
+            _reschedule(idx, subscr_dir, min(poll_sec * 2, 900))
+            continue
 
         poll_state_dir = subscr_dir / "poll"
         ensure_dir(poll_state_dir)
@@ -144,20 +167,30 @@ def run_poll(
         seen_keys = set(state.get("seenKeys", []))
         poll_count = int(state.get("pollCount") or 0)
 
-        # --- Call HAFAS ---
-        details, corr_id, request_payload = hafas.subscr_details(subscr_id)
+        # --- Call HAFAS safely ---
+        try:
+            details, corr_id, request_payload = hafas.subscr_details(subscr_id)
+        except Exception:
+            # Réseau/500/timeout: on backoff sans tout arrêter
+            _reschedule(idx, subscr_dir, min(poll_sec * 2, 900))
+            continue
 
+        # --- Logs ---
         if save_logs:
-            secrets = {
-                hafas.config.aid: "<AID>",
-                hafas.config.user_id: "<USER_ID>",
-                hafas.config.channel_id: "<CHANNEL_ID>",
-            }
-            raw_dir = subscr_dir / "raw"
-            ensure_dir(raw_dir)
-            write_json_redacted(raw_dir / f"{poll_count:02d}_subscrdetails_resp.json", details, secrets)
-            write_json_redacted(raw_dir / f"{poll_count:02d}_subscrdetails_req.json", request_payload, secrets)
-            (raw_dir / f"{poll_count:02d}_subscrdetails_corrid.txt").write_text(corr_id, encoding="utf-8")
+            try:
+                secrets = {
+                    hafas.config.aid: "<AID>",
+                    hafas.config.user_id: "<USER_ID>",
+                    hafas.config.channel_id: "<CHANNEL_ID>",
+                }
+                raw_dir = subscr_dir / "raw"
+                ensure_dir(raw_dir)
+                write_json_redacted(raw_dir / f"{poll_count:02d}_subscrdetails_resp.json", details, secrets)
+                write_json_redacted(raw_dir / f"{poll_count:02d}_subscrdetails_req.json", request_payload, secrets)
+                (raw_dir / f"{poll_count:02d}_subscrdetails_corrid.txt").write_text(corr_id, encoding="utf-8")
+            except Exception:
+                # Logging ne doit jamais casser le poll
+                pass
 
         now = datetime.now(timezone.utc)
         dep_time = _extract_departure_time(details)
@@ -183,7 +216,7 @@ def run_poll(
                     continue
                 seen_keys.add(key)
                 normalized_rows.append(
-                    _normalize_event(event, scenario_id, subscr_id, corr_id, ts_poll_utc, include_raw)
+                    _normalize_event(event, scenario_id, int(subscr_id), corr_id, ts_poll_utc, include_raw)
                 )
 
             if normalized_rows:
@@ -193,7 +226,7 @@ def run_poll(
         update_state(state_path, seen_keys, poll_count=poll_count)
 
         # --- Reschedule this subscription ---
-        # Keep your existing behavior: slower outside window (x2, capped at 15 min).
+        # Keep your behavior: slower outside window (x2, capped at 15 min).
         if dep_time is None:
             interval = float(poll_sec)
         else:
@@ -208,5 +241,6 @@ def run_poll(
 
         heapq.heappush(heap, (next_due, idx, subscr_dir))
 
-        if deadline and datetime.now(timezone.utc) >= deadline:
+        if _deadline_reached():
             break
+
