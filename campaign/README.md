@@ -83,6 +83,53 @@ python -m campaign.notification_log \
 echo "OK: $EXPORT_JSON -> $OUT_NDJSON"
 ```
 
+Use this block as-is in Termux to run the report
+
+```bash
+set -e
+
+EXPORT_JSON="$(ls -t /sdcard/NOTIF/exports/*.json 2>/dev/null | head -n 1)"
+[ -z "$EXPORT_JSON" ] && echo "No export JSON found in /sdcard/NOTIF/exports" && exit 1
+
+RUN_DIR="$(ls -td /sdcard/NOTIF/campaigns/RUN_* 2>/dev/null | head -n 1)"
+[ -z "$RUN_DIR" ] && echo "No RUN_* found in /sdcard/NOTIF/campaigns" && exit 1
+
+OUT_NDJSON="$RUN_DIR/device/notifications.ndjson"
+mkdir -p "$(dirname "$OUT_NDJSON")"
+
+echo "Using export: $EXPORT_JSON"
+echo "Using run:    $RUN_DIR"
+
+python -m campaign.notification_log \
+  --in "$EXPORT_JSON" \
+  --out "$OUT_NDJSON" \
+  --append \
+  --packages "lu.cfl.cflgo.qual,de.hafas.android.cfl"
+
+echo "OK: $EXPORT_JSON -> $OUT_NDJSON"
+
+# -----------------------
+# Generate report
+# -----------------------
+
+REPORT_DIR="$RUN_DIR/report"
+mkdir -p "$REPORT_DIR"
+
+echo "Using device: $OUT_NDJSON"
+echo "Report dir:   $REPORT_DIR"
+
+python -m campaign.report \
+  --run-dir "$RUN_DIR" \
+  --device-ndjson "$OUT_NDJSON" \
+  --out-dir "$REPORT_DIR" \
+  --match-threshold 70.0
+
+echo "OK: $RUN_DIR -> $REPORT_DIR"
+echo "Report files:"
+ls -la "$REPORT_DIR"
+```
+
+
 ## Structure
 
 ```
