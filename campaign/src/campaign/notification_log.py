@@ -66,6 +66,9 @@ def convert_notification_log_export(
         for item in items:
             if not isinstance(item, dict):
                 continue
+            # Ignore Android group summary notifications (UI container, not real content)
+            if item.get("isGroupSummary") is True:
+                continue
             pkg = pick(item, "packageName", "package")
             if package_filter is not None and pkg not in package_filter:
                 continue
