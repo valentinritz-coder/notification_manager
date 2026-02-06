@@ -9,7 +9,7 @@ This toolkit manages end-to-end notification campaigns for HAFAS subscriptions:
 
 ## Quickstart (Termux copy/paste)
 
-Use this block as-is in Termux. `HAFAS_CLIENT_ID` maps to the request payload `client.id` (HAFAS/CFL enum) and **must not** be the Android `ANDROID-xxxx` push channel id.
+Use this block as-is in Termux to run the monitoring.
 
 ```bash
 cd ~/notification_manager/campaign
@@ -57,11 +57,31 @@ python -m campaign.cli poll \
   --client-id "$HAFAS_CLIENT_ID"
 ```
 
-### Common mistakes
+Use this block as-is in Termux to run the notification conversion
 
-- Don’t put the ANDROID-xxxx push channel id into `--client-id`.
-- `--hci-client-type` should be `AND` (not `ANDROID`).
-- `--client-id` is the HAFAS/CFL client enum (e.g., `HAFAS`, `CFL`).
+```bash
+set -e
+
+EXPORT_JSON="$(ls -t /sdcard/NOTIF/exports/*.json 2>/dev/null | head -n 1)"
+[ -z "$EXPORT_JSON" ] && echo "No export JSON found in /sdcard/NOTIF/exports" && exit 1
+
+RUN_DIR="$(ls -td /sdcard/NOTIF/campaigns/RUN_* 2>/dev/null | head -n 1)"
+[ -z "$RUN_DIR" ] && echo "No RUN_* found in /sdcard/NOTIF/campaigns" && exit 1
+
+OUT_NDJSON="$RUN_DIR/device/notifications.ndjson"
+mkdir -p "$(dirname "$OUT_NDJSON")"
+
+echo "Using export: $EXPORT_JSON"
+echo "Using run:    $RUN_DIR"
+
+python -m campaign.notification_log \
+  --in "$EXPORT_JSON" \
+  --out "$OUT_NDJSON" \
+  --append \
+  --packages "lu.cfl.cflgo.qual,de.hafas.android.cfl"
+
+echo "OK: $EXPORT_JSON -> $OUT_NDJSON"
+```
 
 ## Structure
 
