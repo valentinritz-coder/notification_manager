@@ -32,6 +32,8 @@ mkdir -p /sdcard/NOTIF/campaigns
 
 python -m campaign.cli subscribe \
   --scenario ./examples/scenario_example.json \
+  --idle-grace-min 15 \
+  --verbose \
   --out-root /sdcard/NOTIF/campaigns \
   --base-url "$HAFAS_BASE_URL" \
   --aid "$HAFAS_AID" \
