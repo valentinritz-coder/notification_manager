@@ -219,6 +219,7 @@ cd ~/.../<repo>/campaign
 python -m campaign.cli poll \
   --run-dir /sdcard/NOTIF/campaigns/RUN_20260205_080000__morning_peak \
   --idle-grace-min 15 \
+  --verbose \
   --base-url "https://cfl.hafas.de/gate" \
   --aid "$HAFAS_AID" \
   --user-id "$HAFAS_USER_ID" \
@@ -239,6 +240,7 @@ RUN_YYYYMMDD_HHMMSS__<campaignName>/
       raw/
       poll/
         rt_events.ndjson
+        poll_log.ndjson
         state.json
   device/
     notifications.ndjson
@@ -348,6 +350,13 @@ Outputs:
 - API calls are rate limited via `pollSec` with backoff outside the window.
 - Polling stops per subscription once the planned arrival window ends and no new RT activity
   has been observed for `idleGraceMin` minutes.
+- `campaign.cli poll --verbose` prints one compact line per poll attempt and always appends
+  a structured `poll_log.ndjson` under each `subscr_*/poll/` folder (unless `--no-save-logs`
+  is set). Example line (redacted):
+
+```json
+{"tsUtc":"2026-02-05T08:49:12+00:00","tsLocal":"2026-02-05T09:49:12+01:00","subscrId":1877149,"scenarioId":"bus602_60","pollCount":12,"in_window":true,"window_start_utc":"2026-02-05T08:30:00+00:00","window_start_local":"2026-02-05T09:30:00+01:00","window_end_utc":"2026-02-05T09:30:00+00:00","window_end_local":"2026-02-05T10:30:00+01:00","dep_time_utc":"2026-02-05T08:40:00+00:00","dep_time_local":"2026-02-05T09:40:00+01:00","arr_time_utc":"2026-02-05T09:10:00+00:00","arr_time_local":"2026-02-05T10:10:00+01:00","planned_end_utc":"2026-02-05T09:40:00+00:00","planned_end_local":"2026-02-05T10:40:00+01:00","last_activity_utc":"2026-02-05T08:49:12+00:00","last_activity_local":"2026-02-05T09:49:12+01:00","idle_deadline_utc":"2026-02-05T09:04:12+00:00","idle_deadline_local":"2026-02-05T10:04:12+01:00","interval_sec":120.0,"next_due_monotonic":123456.78,"next_due_utc":"2026-02-05T08:51:12+00:00","events_total":3,"new_events":1,"dedup_skipped":2,"done":false,"done_reason":"running"}
+```
 - Logs redact `aid`, `user_id`, and `channel_id` in saved request/response payloads.
 - Matching uses `rapidfuzz` if available, otherwise a fallback string similarity.
 - Notification `id` is a stable identifier for update detection, not a global event id.

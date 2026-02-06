@@ -72,6 +72,11 @@ def main() -> None:
     poll_parser.add_argument("--max-minutes", type=int, default=0)
     poll_parser.add_argument("--include-raw", action="store_true")
     poll_parser.add_argument("--no-save-logs", action="store_true")
+    poll_parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Print one line per poll attempt with scheduling decisions",
+    )
     _add_hafas_args(poll_parser)
 
     sync_parser = subparsers.add_parser("sync-device-notifs", help="Copy device NDJSON into run folder")
@@ -142,6 +147,7 @@ def main() -> None:
             max_runtime_min=max_runtime_min,
             include_raw=args.include_raw,
             save_logs=not args.no_save_logs,
+            verbose=args.verbose,
         )
         return
 
