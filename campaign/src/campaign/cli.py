@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from typing import Optional
 
@@ -18,6 +19,7 @@ def _build_hafas(args: argparse.Namespace) -> HafasGate:
         base_url=args.base_url,
         aid=args.aid,
         user_id=args.user_id,
+        client_id=args.client_id,
         channel_id=args.channel_id,
         lang=args.lang,
         ver=args.ver,
@@ -33,12 +35,21 @@ def _add_hafas_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--base-url", required=True, help="HAFAS /gate endpoint")
     parser.add_argument("--aid", required=True, help="AID credential")
     parser.add_argument("--user-id", required=True, help="External user id")
-    parser.add_argument("--channel-id", required=True, help="Channel/client id")
-    parser.add_argument("--lang", default="en")
-    parser.add_argument("--ver", default="1.16")
+    parser.add_argument(
+        "--client-id",
+        default="HAFAS",
+        help="HAFAS client id enum for envelope client.id (e.g., HAFAS, CFL)",
+    )
+    parser.add_argument(
+        "--channel-id",
+        required=True,
+        help="Push channel id (ANDROID-xxxx) for subscription delivery",
+    )
+    parser.add_argument("--lang", default="eng")
+    parser.add_argument("--ver", default="1.72")
     parser.add_argument("--hci-client-type", default="AND")
-    parser.add_argument("--hci-client-version", default="1.0")
-    parser.add_argument("--hci-version", default="1.16")
+    parser.add_argument("--hci-client-version", type=int, default=1000680)
+    parser.add_argument("--hci-version", default="1.72")
     parser.add_argument("--timeout-sec", type=int, default=30)
 
 
@@ -88,6 +99,13 @@ def main() -> None:
     _add_hafas_args(search_parser)
 
     args = parser.parse_args()
+
+    if args.client_id.upper().startswith("ANDROID-"):
+        print(
+            "Warning: --client-id looks like a push channel id. Use --channel-id for "
+            "ANDROID-xxxx and --client-id for the HAFAS/CFL client enum.",
+            file=sys.stderr,
+        )
 
     if args.command == "subscribe":
         hafas = _build_hafas(args)
