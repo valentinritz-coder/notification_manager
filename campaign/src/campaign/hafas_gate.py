@@ -38,7 +38,6 @@ class HafasGate:
         }
         payload = {
             "auth": {"type": "AID", "aid": self.config.aid},
-            # client.id must be the HAFAS/CFL client enum, not the push channel id.
             "client": {
                 "type": self.config.hci_client_type,
                 "id": self.config.client_id,
@@ -49,7 +48,14 @@ class HafasGate:
             },
             "lang": self.config.lang,
             "ver": self.config.ver,
-            "svcReqL": [{"meth": method, "req": req}],
+            "svcReqL": [
+                {
+                    "meth": method,
+                    "req": req,
+                    "cfg": {},
+                    "id": "0",
+                }
+            ],
         }
         headers = {"X-Correlation-ID": corr_id}
         response = self.session.post(
@@ -63,24 +69,40 @@ class HafasGate:
         return response.json(), corr_id, payload
 
     def subscr_create_con(self, item: Dict[str, Any]) -> Tuple[Dict[str, Any], str, Dict[str, Any]]:
-        req = {
-            "ctxRecon": item["ctxRecon"],
-            "nPass": item.get("nPass", 1),
-            "serviceDays": {"begin": item["beginDate"], "end": item["endDate"]},
-            "hysteresis": item.get("hysteresis") or {},
-            "extUserId": self.config.user_id,
-            "channel": self.config.channel_id,
+        begin = item["beginDate"]
+        end = item.get("endDate", begin)
+    
+        hysteresis_in = item.get("hysteresis") or {}
+        hysteresis = {
+            "minDeviationInterval": int(hysteresis_in.get("minDeviationInterval", 5)),
+            "notificationStart": int(hysteresis_in.get("notificationStart", 60)),
         }
-        return self._post("SubscrCreate", req)
+    
+        req = {
+            "userId": self.config.user_id,
+            "channels": [{"channelId": self.config.channel_id}],
+            "conSubscr": {
+                "serviceDays": {"beginDate": begin, "endDate": end},
+                "ctxRecon": item["ctxRecon"],
+                "hysteresis": hysteresis,
+            },
+            "nPass": int(item.get("nPass", 1)),
+        }
+    return self._post("SubscrCreate", req)
 
     def subscr_details(self, subscr_id: int) -> Tuple[Dict[str, Any], str, Dict[str, Any]]:
-        req = {"subscrId": subscr_id, "extUserId": self.config.user_id}
+        req = {
+            "subscrId": subscr_id,
+            "userId": self.config.user_id,
+            "channelId": self.config.channel_id,
+        }
         return self._post("SubscrDetails", req)
-
+    
     def subscr_search(self) -> Tuple[Dict[str, Any], str, Dict[str, Any]]:
-        req = {"extUserId": self.config.user_id}
+        req = {"userId": self.config.user_id}
         return self._post("SubscrSearch", req)
-
+    
     def subscr_delete(self, subscr_id: int) -> Tuple[Dict[str, Any], str, Dict[str, Any]]:
-        req = {"subscrId": subscr_id, "extUserId": self.config.user_id}
+        req = {"userId": self.config.user_id, "subscrId": subscr_id}
         return self._post("SubscrDelete", req)
+
