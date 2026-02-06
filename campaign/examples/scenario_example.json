@@ -6,12 +6,20 @@
   "maxRuntimeMin": 240,
   "items": [
     {
-      "scenarioId": "nancy_lux_ter88576",
+      "scenarioId": "bus602",
       "beginDate": "20260206",
       "endDate": "20260206",
       "nPass": 1,
       "hysteresis": { "notificationStart": 20, "minDeviationInterval": 5 },
-      "ctxRecon": "¶HKI¶T$A=1@O=NANCY (France)@L=8714100@a=128@$A=1@O=Luxembourg@L=9217081@a=128@$202602051650$202602051824$TER88576$$1$$$$$$¶KC¶#VE#2#CF#100#CA#0#CM#0#SICT#0#AM#81#AM2#0#RT#15#¶KCC¶#VE#0#ERG#1#HIN#0#ECK#80210|80210|80304|80304|0|0|5|80188|1|0|2|0|0|-2147483648#¶KRCC¶#VE#1#"
+      "ctxRecon": "¶HKI¶T$A=1@O=Val de Briey, Albert 1er@L=400000168@a=128@$A=1@O=Luxembourg, Gare Centrale routière@L=161601@a=128@$202602060852$202602061012$Bus 602$$1$$$$$$¶KC¶#VE#2#CF#100#CA#0#CM#0#SICT#0#AM#81#AM2#0#RT#15#¶KCC¶#VE#0#ERG#1#HIN#0#ECK#81172|81172|81252|81252|0|0|5|81132|1|0|2|0|0|-2147483648#¶KRCC¶#VE#1#"
+    },
+    {
+      "scenarioId": "bus602",
+      "beginDate": "20260206",
+      "endDate": "20260206",
+      "nPass": 1,
+      "hysteresis": { "notificationStart": 60, "minDeviationInterval": 5 },
+      "ctxRecon": "¶HKI¶T$A=1@O=Val de Briey, Albert 1er@L=400000168@a=128@$A=1@O=Luxembourg, Gare Centrale routière@L=161601@a=128@$202602060852$202602061012$Bus 602$$1$$$$$$¶KC¶#VE#2#CF#100#CA#0#CM#0#SICT#0#AM#81#AM2#0#RT#15#¶KCC¶#VE#0#ERG#1#HIN#0#ECK#81172|81172|81252|81252|0|0|5|81132|1|0|2|0|0|-2147483648#¶KRCC¶#VE#1#"
     }
   ]
 }
