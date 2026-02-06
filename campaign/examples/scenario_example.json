@@ -11,7 +11,7 @@
       "endDate": "20260206",
       "nPass": 1,
       "hysteresis": { "notificationStart": 20, "minDeviationInterval": 5 },
-      "ctxRecon": "¶HKI¶T$A=1@O=Senningerberg, Charlys Statioun@L=200508003@a=128@$A=1@O=Hesperange, Cité Um Schlass@L=200303002@a=128@$202602061112$202602061203$Bus 29$$3$$$$$$¶KC¶#VE#2#CF#100#CA#0#CM#0#SICT#0#AM#81#AM2#0#RT#15#¶KCC¶#VE#0#ERG#8193#HIN#0#ECK#81314|81312|81364|81364|0|0|165|81312|1|0|2|0|0|-2147483648#¶KRCC¶#VE#1#"
+      "ctxRecon": "¶HKI¶T$A=1@O=Luxembourg@L=9217081@a=128@$A=1@O=KOBLENZ HBF (Germany)@L=8019023@a=128@$202602061233$202602061456$RE 5119$$3$$$$$$¶KC¶#VE#2#CF#100#CA#0#CM#0#SICT#0#AM#81#AM2#0#RT#15#¶KCC¶#VE#0#ERG#1#HIN#0#ECK#81418|81418|81554|81554|0|0|5|81417|1|0|2|0|0|-2147483648#¶KRCC¶#VE#1#VOLL#IST#"
     }
   ]
 }
