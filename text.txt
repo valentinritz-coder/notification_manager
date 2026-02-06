@@ -26,3 +26,44 @@ python -m campaign.cli subscribe \
   --user-id "$HAFAS_USER_ID" \
   --channel-id "$HAFAS_CHANNEL_ID" \
   --client-id "$HAFAS_CLIENT_ID"
+
+
+
+
+
+
+
+{
+  "auth": {
+    "type": "AID",
+    "aid": "<AID>"
+  },
+  "client": {
+    "id": "HAFAS",
+    "type": "AND",
+    "name": "campaign",
+    "l": "eng",
+    "v": 1000680
+  },
+  "lang": "eng",
+  "ver": "1.72",
+  "svcReqL": [
+    {
+      "meth": "SubscrCreate",
+      "req": {
+        "ctxRecon": "¶HKI¶T$A=1@O=NANCY (France)@L=8714100@a=128@$A=1@O=Luxembourg@L=9217081@a=128@$202602051650$202602051824$TER88576$$1$$$$$$¶KC¶#VE#2#CF#100#CA#0#CM#0#SICT#0#AM#81#AM2#0#RT#15#¶KCC¶#VE#0#ERG#1#HIN#0#ECK#80210|80210|80304|80304|0|0|5|80188|1|0|2|0|0|-2147483648#¶KRCC¶#VE#1#",
+        "nPass": 1,
+        "serviceDays": {
+          "begin": "20260206",
+          "end": "20260206"
+        },
+        "hysteresis": {
+          "notificationStart": 20,
+          "minDeviationInterval": 5
+        },
+        "extUserId": "<USER_ID>",
+        "channel": "<CHANNEL_ID>"
+      }
+    }
+  ]
+}
