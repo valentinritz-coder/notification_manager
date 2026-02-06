@@ -15,7 +15,7 @@ class HafasConfig:
     channel_id: str
     lang: str = "en"
     ver: str = "1.16"
-    hci_client_type: str = "ANDROID"
+    hci_client_type: str = "AND"
     hci_client_version: str = "1.0"
     hci_version: str = "1.16"
     timeout_sec: int = 30
