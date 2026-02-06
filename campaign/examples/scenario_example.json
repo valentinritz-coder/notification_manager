@@ -6,20 +6,12 @@
   "maxRuntimeMin": 240,
   "items": [
     {
-      "scenarioId": "bus602_20",
+      "scenarioId": "bus223_20",
       "beginDate": "20260206",
       "endDate": "20260206",
       "nPass": 1,
       "hysteresis": { "notificationStart": 20, "minDeviationInterval": 5 },
-      "ctxRecon": "¶HKI¶T$A=1@O=Val de Briey, Albert 1er@L=400000168@a=128@$A=1@O=Luxembourg, Gare Centrale routière@L=161601@a=128@$202602060852$202602061012$Bus 602$$1$$$$$$¶KC¶#VE#2#CF#100#CA#0#CM#0#SICT#0#AM#81#AM2#0#RT#15#¶KCC¶#VE#0#ERG#1#HIN#0#ECK#81172|81172|81252|81252|0|0|5|81132|1|0|2|0|0|-2147483648#¶KRCC¶#VE#1#"
-    },
-    {
-      "scenarioId": "bus602_60",
-      "beginDate": "20260206",
-      "endDate": "20260206",
-      "nPass": 1,
-      "hysteresis": { "notificationStart": 60, "minDeviationInterval": 5 },
-      "ctxRecon": "¶HKI¶T$A=1@O=Val de Briey, Albert 1er@L=400000168@a=128@$A=1@O=Luxembourg, Gare Centrale routière@L=161601@a=128@$202602060852$202602061012$Bus 602$$1$$$$$$¶KC¶#VE#2#CF#100#CA#0#CM#0#SICT#0#AM#81#AM2#0#RT#15#¶KCC¶#VE#0#ERG#1#HIN#0#ECK#81172|81172|81252|81252|0|0|5|81132|1|0|2|0|0|-2147483648#¶KRCC¶#VE#1#"
+      "ctxRecon": "¶HKI¶T$A=1@O=Junglinster, P+R@L=614102@a=128@$A=1@O=Bonnevoie, Lycée Bouneweg PE@L=261004@a=128@$202602060920$202602061006$Bus 223$$1$$$$$$¶KC¶#VE#2#CF#100#CA#0#CM#0#SICT#0#AM#81#AM2#0#RT#7#¶KCC¶#VE#0#ERG#8193#HIN#0#ECK#81203|81200|81243|81246|0|0|85|81200|1|0|2|0|0|-2147483648#¶KRCC¶#VE#1#"
     }
   ]
 }
