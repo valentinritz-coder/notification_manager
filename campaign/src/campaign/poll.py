@@ -31,7 +31,7 @@ def _get_connection_info0(details: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     except Exception:
         return None
 
-    # Preferred: SubscrDetails -> res.details.conSubscr.connectionInfo[0]
+    # Preferred: res.details.conSubscr.connectionInfo[0]
     try:
         ci = res["details"]["conSubscr"]["connectionInfo"][0]
         if isinstance(ci, dict):
@@ -39,7 +39,28 @@ def _get_connection_info0(details: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     except Exception:
         pass
 
-    # Fallback: legacy -> res.connectionInfo[0]
+    # Alt: res.details.intvlSubscr.connectionInfo[0] (si jamais)
+    try:
+        ci = res["details"]["intvlSubscr"]["connectionInfo"][0]
+        if isinstance(ci, dict):
+            return ci
+    except Exception:
+        pass
+
+    # Fallback: take conSecInfo from latest rtEvent
+    try:
+        eh = res["details"]["eventHistory"]
+        rt = eh.get("rtEvents") or []
+        if isinstance(rt, list) and rt:
+            last = rt[-1]
+            sec = (last.get("rtConSecInfos") or [])[0]
+            ci = (sec.get("conSecInfo") or {})
+            if isinstance(ci, dict) and ci:
+                return ci
+    except Exception:
+        pass
+
+    # Legacy fallback: res.connectionInfo[0]
     try:
         ci = res["connectionInfo"][0]
         if isinstance(ci, dict):
@@ -48,7 +69,6 @@ def _get_connection_info0(details: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         pass
 
     return None
-
 
 def _extract_departure_time(details: Dict[str, Any]) -> Optional[datetime]:
     ci0 = _get_connection_info0(details)
