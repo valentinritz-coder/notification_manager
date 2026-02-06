@@ -104,6 +104,7 @@ def update_state(
     last_activity_utc: str | None = None,
     planned_end_utc: str | None = None,
     done: bool | None = None,
+    extra_fields: Dict[str, Any] | None = None,
 ) -> None:
     state: Dict[str, Any] = {}
     if path.exists():
@@ -131,4 +132,6 @@ def update_state(
         state["done"] = done
     elif "done" not in state:
         state["done"] = False
+    if extra_fields:
+        state.update(extra_fields)
     write_json(path, state)

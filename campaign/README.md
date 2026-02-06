@@ -177,6 +177,8 @@ See `examples/scenario_example.json` for a working template.
 }
 ```
 
+**Polling window behavior:** `preWindowMin`/`postWindowMin` define the “interesting” window that affects polling cadence and stop conditions. Event collection itself is no longer gated by the window, so `rt_events.ndjson` is written as soon as the API returns events—even if polling starts before the window or events arrive after the scheduled time.
+
 ## Running a campaign (Android)
 
 Export credentials first to avoid leaking secrets in shell history:

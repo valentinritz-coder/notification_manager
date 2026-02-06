@@ -281,41 +281,38 @@ def run_poll(
             window_end = (arr_time or dep_time) + timedelta(minutes=post_window_min)
             in_window = window_start <= now <= window_end
         else:
+            window_start = None
+            window_end = None
             in_window = False
 
-        # If dep_time is unknown, keep polling normally and still harvest events.
-        process_events = in_window or dep_time is None
-
         activity = False
-        if process_events:
-            events = _extract_rt_events(details)
-            ts_poll_utc = now.isoformat()
-            normalized_rows: List[Dict[str, Any]] = []
+        events = _extract_rt_events(details)
+        ts_poll_utc = now.isoformat()
+        normalized_rows: List[Dict[str, Any]] = []
 
-            for event in events:
-                key = _event_key(event)
-                if key in seen_keys:
-                    continue
-                seen_keys.add(key)
-                normalized_rows.append(
-                    _normalize_event(event, scenario_id, int(subscr_id), corr_id, ts_poll_utc, include_raw)
-                )
+        for event in events:
+            key = _event_key(event)
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
+            normalized_rows.append(
+                _normalize_event(event, scenario_id, int(subscr_id), corr_id, ts_poll_utc, include_raw)
+            )
 
-            if normalized_rows:
-                append_ndjson(poll_state_dir / "rt_events.ndjson", normalized_rows)
-                activity = True
+        if normalized_rows:
+            append_ndjson(poll_state_dir / "rt_events.ndjson", normalized_rows)
+            activity = True
 
         if activity:
             last_activity = now
-        elif last_activity is None:
-            if in_window:
-                last_activity = now
-            elif planned_end:
-                last_activity = start_time
+        elif last_activity is None and planned_end:
+            last_activity = planned_end
 
         poll_count += 1
         done = False
-        if planned_end and last_activity:
+        if planned_end:
+            if last_activity is None:
+                last_activity = planned_end
             idle_deadline = last_activity + timedelta(minutes=idle_grace_min)
             if now > planned_end and now > idle_deadline:
                 done = True
@@ -326,16 +323,27 @@ def run_poll(
             last_activity_utc=last_activity.isoformat() if last_activity else None,
             planned_end_utc=planned_end_utc,
             done=done,
+            extra_fields={
+                "dep_time": dep_time.astimezone(timezone.utc).isoformat() if dep_time else None,
+                "arr_time": arr_time.astimezone(timezone.utc).isoformat() if arr_time else None,
+                "window_start": window_start.astimezone(timezone.utc).isoformat() if window_start else None,
+                "window_end": window_end.astimezone(timezone.utc).isoformat() if window_end else None,
+                "in_window": in_window,
+            },
         )
         if done:
             continue
 
         # --- Reschedule this subscription ---
-        # Keep your behavior: slower outside window (x2, capped at 15 min).
         if dep_time is None:
             interval = float(poll_sec)
         else:
-            interval = float(poll_sec) if in_window else float(min(poll_sec * 2, 900))
+            if now < window_start:
+                interval = float(min(poll_sec * 2, 900))
+            elif in_window:
+                interval = float(poll_sec)
+            else:
+                interval = float(min(poll_sec * 2, 900))
 
         next_due = due_mono + interval
 
