@@ -88,7 +88,7 @@ class HafasGate:
             },
             "nPass": int(item.get("nPass", 1)),
         }
-    return self._post("SubscrCreate", req)
+        return self._post("SubscrCreate", req)
 
     def subscr_details(self, subscr_id: int) -> Tuple[Dict[str, Any], str, Dict[str, Any]]:
         req = {
