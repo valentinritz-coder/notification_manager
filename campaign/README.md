@@ -14,7 +14,12 @@ Use this block as-is in Termux. `HAFAS_CLIENT_ID` maps to the request payload `c
 ```bash
 cd ~/notification_manager/campaign
 git pull
+
 source ~/.venvs/hafas_campaign/bin/activate
+
+# Installer/mettre à jour les deps du repo (incluant tzdata)
+pip install -U pip
+pip install -r requirements.txt
 
 export HAFAS_BASE_URL="https://cfl.hafas.de/gate"
 export HAFAS_AID="ALT2vl7LAFDFu2dz"
