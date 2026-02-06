@@ -12,12 +12,13 @@ class HafasConfig:
     base_url: str
     aid: str
     user_id: str
+    client_id: str
     channel_id: str
-    lang: str = "en"
-    ver: str = "1.16"
+    lang: str = "eng"
+    ver: str = "1.72"
     hci_client_type: str = "AND"
-    hci_client_version: str = "1.0"
-    hci_version: str = "1.16"
+    hci_client_version: int = 1000680
+    hci_version: str = "1.72"
     timeout_sec: int = 30
 
 
@@ -37,7 +38,14 @@ class HafasGate:
         }
         payload = {
             "auth": {"type": "AID", "aid": self.config.aid},
-            "client": {"id": self.config.channel_id, "type": self.config.hci_client_type, "name": "campaign", "l": self.config.lang, "v": self.config.hci_client_version},
+            # client.id must be the HAFAS/CFL client enum, not the push channel id.
+            "client": {
+                "id": self.config.client_id,
+                "type": self.config.hci_client_type,
+                "name": "campaign",
+                "l": self.config.lang,
+                "v": self.config.hci_client_version,
+            },
             "lang": self.config.lang,
             "ver": self.config.ver,
             "svcReqL": [{"meth": method, "req": req}],
@@ -75,4 +83,3 @@ class HafasGate:
     def subscr_delete(self, subscr_id: int) -> Tuple[Dict[str, Any], str, Dict[str, Any]]:
         req = {"subscrId": subscr_id, "extUserId": self.config.user_id}
         return self._post("SubscrDelete", req)
-

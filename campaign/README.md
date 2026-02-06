@@ -134,8 +134,12 @@ Export credentials first to avoid leaking secrets in shell history:
 ```sh
 export HAFAS_AID="..."
 export HAFAS_USER_ID="..."
+export HAFAS_CLIENT_ID="HAFAS"
 export HAFAS_CHANNEL_ID="..."
 ```
+
+`HAFAS_CLIENT_ID` is the HAFAS/CFL client enum used in the request envelope, while
+`HAFAS_CHANNEL_ID` is the Android push channel id (ANDROID-xxxx) used for subscription delivery.
 
 1. Subscribe:
 
@@ -147,6 +151,7 @@ python -m campaign.cli subscribe \
   --base-url "https://cfl.hafas.de/gate" \
   --aid "$HAFAS_AID" \
   --user-id "$HAFAS_USER_ID" \
+  --client-id "$HAFAS_CLIENT_ID" \
   --channel-id "$HAFAS_CHANNEL_ID"
 ```
 
@@ -159,6 +164,7 @@ python -m campaign.cli poll \
   --base-url "https://cfl.hafas.de/gate" \
   --aid "$HAFAS_AID" \
   --user-id "$HAFAS_USER_ID" \
+  --client-id "$HAFAS_CLIENT_ID" \
   --channel-id "$HAFAS_CHANNEL_ID"
 ```
 

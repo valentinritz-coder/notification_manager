@@ -11,7 +11,8 @@ python -m campaign.cli subscribe \
   --base-url "$BASE_URL" \
   --aid "YOUR_AID" \
   --user-id "YOUR_USER_ID" \
+  --client-id "HAFAS" \
   --channel-id "YOUR_CHANNEL_ID"
 
 # Poll using the run dir printed from subscribe
-# python -m campaign.cli poll --run-dir /sdcard/NOTIF/campaigns/RUN_... --base-url "$BASE_URL" --aid "YOUR_AID" --user-id "YOUR_USER_ID" --channel-id "YOUR_CHANNEL_ID"
+# python -m campaign.cli poll --run-dir /sdcard/NOTIF/campaigns/RUN_... --base-url "$BASE_URL" --aid "YOUR_AID" --user-id "YOUR_USER_ID" --client-id "HAFAS" --channel-id "YOUR_CHANNEL_ID"
