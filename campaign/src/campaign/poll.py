@@ -7,6 +7,7 @@ import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+from zoneinfo import ZoneInfo
 
 from dateutil import parser as dt_parser
 
@@ -14,14 +15,18 @@ from .hafas_gate import HafasGate
 from .io import append_ndjson, ensure_dir, ensure_state, read_json, update_state, write_json_redacted
 
 
+DEFAULT_TZ = ZoneInfo("Europe/Luxembourg")
+
 def _parse_dt(value: Optional[str]) -> Optional[datetime]:
     if not value:
         return None
     try:
         parsed = dt_parser.isoparse(value)
+        # If HAFAS omits TZ, assume Europe/Luxembourg (not UTC)
         if parsed.tzinfo is None:
-            return parsed.replace(tzinfo=timezone.utc)
-        return parsed
+            parsed = parsed.replace(tzinfo=DEFAULT_TZ)
+        # Normalize everything to UTC for comparisons/storage
+        return parsed.astimezone(timezone.utc)
     except (ValueError, TypeError):
         return None
 
