@@ -199,6 +199,47 @@ python -m campaign.cli sync-device-notifs \
   --device-ndjson /sdcard/NOTIF/device_notifications.ndjson
 ```
 
+### Free notification logging via Notification Log export
+
+If you want a free logger, install the Android app **Notification Log** (`org.hcilab.projects.nlog`). It can export all posted/removed notifications to a single JSON file.
+
+**Export flow (Notification Log app):**
+1. Open the app, choose **Export**, and save the JSON to a shared folder (e.g. `/sdcard/NOTIF/notification_log_export.json`).
+2. Convert the export JSON into our NDJSON format:
+
+```sh
+python -m campaign.cli import-notification-log \
+  --export-json /sdcard/NOTIF/notification_log_export.json \
+  --out-ndjson /sdcard/NOTIF/device_notifications.ndjson \
+  --append \
+  --packages de.hafas.android.cfl,lu.cfl.cflgo.qual
+```
+
+**Run-folder flow (recommended):**
+
+```sh
+python -m campaign.cli import-notification-log \
+  --export-json /sdcard/NOTIF/notification_log_export.json \
+  --run-dir /sdcard/NOTIF/campaigns/RUN_20260205_080000__morning_peak \
+  --packages de.hafas.android.cfl
+```
+
+Recommended CFL app filters:
+- `de.hafas.android.cfl` (CFL mobile)
+- `lu.cfl.cflgo.qual` (CFL GO QUAL)
+
+**Recommended pipeline:**
+1. Subscribe (`campaign.cli subscribe`)
+2. Poll (`campaign.cli poll`)
+3. Export notifications JSON from Notification Log
+4. Import into `run-dir/device/notifications.ndjson` (`campaign.cli import-notification-log`)
+5. Report (`campaign.cli report`)
+
+**Storage convention (Termux):**
+- Repo and venv in `~`
+- Outputs in `/sdcard/NOTIF`
+- Remember to run `termux-setup-storage` once
+
 ## Report (PC)
 
 Device notifications can be provided either by:
@@ -243,3 +284,8 @@ Outputs:
 - API calls are rate limited via `pollSec` with backoff outside the window.
 - Logs redact `aid`, `user_id`, and `channel_id` in saved request/response payloads.
 - Matching uses `rapidfuzz` if available, otherwise a fallback string similarity.
+- Notification `id` is a stable identifier for update detection, not a global event id.
+  - `nid`: Android notification ID (int) used by the app to update/replace notifications.
+  - `key`: unique-ish notification key string that may include user/profile and tag; also used to detect updates.
+  - Reports can count either per `id` (latest state) or treat each `postTime` as a new event depending on strategy.
+- Notification Log exports may have an empty `removed[]` unless removal tracking is enabled in the app settings.

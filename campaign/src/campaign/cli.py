@@ -10,6 +10,7 @@ from .poll import run_poll
 from .report import run_report
 from .subscribe import run_subscribe
 from .io import copy_file, redact_data
+from .notification_log import convert_notification_log_export, parse_package_filter
 
 
 def _build_hafas(args: argparse.Namespace) -> HafasGate:
@@ -65,6 +66,17 @@ def main() -> None:
     sync_parser.add_argument("--run-dir", required=True, type=Path)
     sync_parser.add_argument("--device-ndjson", required=True, type=Path)
 
+    import_log_parser = subparsers.add_parser(
+        "import-notification-log",
+        help="Convert Notification Log export JSON into device NDJSON",
+    )
+    import_log_parser.add_argument("--export-json", required=True, type=Path)
+    import_log_parser.add_argument("--out-ndjson", type=Path, default=None)
+    import_log_parser.add_argument("--run-dir", type=Path, default=None)
+    import_log_parser.add_argument("--append", action="store_true")
+    import_log_parser.add_argument("--include-removed", action="store_true")
+    import_log_parser.add_argument("--packages", default="")
+
     report_parser = subparsers.add_parser("report", help="Generate report")
     report_parser.add_argument("--run-dir", required=True, type=Path)
     report_parser.add_argument("--device-ndjson", type=Path, default=None)
@@ -112,6 +124,23 @@ def main() -> None:
         dest = args.run_dir / "device/notifications.ndjson"
         copy_file(args.device_ndjson, dest)
         print(dest)
+        return
+
+    if args.command == "import-notification-log":
+        if args.out_ndjson is None and args.run_dir is None:
+            raise SystemExit("--out-ndjson or --run-dir is required")
+        if args.out_ndjson is not None and args.run_dir is not None:
+            raise SystemExit("Provide only one of --out-ndjson or --run-dir")
+        out_ndjson = args.out_ndjson or (args.run_dir / "device/notifications.ndjson")
+        packages = parse_package_filter(args.packages)
+        written = convert_notification_log_export(
+            args.export_json,
+            out_ndjson,
+            append=args.append,
+            include_removed=args.include_removed,
+            packages=packages,
+        )
+        print(f"OK: wrote {written} NDJSON lines -> {out_ndjson}")
         return
 
     if args.command == "report":
