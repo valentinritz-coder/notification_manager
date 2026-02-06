@@ -18,3 +18,6 @@ campaign = "campaign.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.poetry.dependencies]
+tzdata = "*"
