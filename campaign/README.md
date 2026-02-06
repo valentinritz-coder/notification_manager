@@ -32,8 +32,6 @@ mkdir -p /sdcard/NOTIF/campaigns
 
 python -m campaign.cli subscribe \
   --scenario ./examples/scenario_example.json \
-  --idle-grace-min 15 \
-  --verbose \
   --out-root /sdcard/NOTIF/campaigns \
   --base-url "$HAFAS_BASE_URL" \
   --aid "$HAFAS_AID" \
@@ -51,6 +49,8 @@ echo "Using run dir: $RUN_DIR"
 python -m campaign.cli poll \
   --run-dir "$RUN_DIR" \
   --base-url "$HAFAS_BASE_URL" \
+  --idle-grace-min 15 \
+  --verbose \
   --aid "$HAFAS_AID" \
   --user-id "$HAFAS_USER_ID" \
   --channel-id "$HAFAS_CHANNEL_ID" \
