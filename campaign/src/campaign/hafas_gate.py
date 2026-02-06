@@ -40,10 +40,11 @@ class HafasGate:
             "auth": {"type": "AID", "aid": self.config.aid},
             # client.id must be the HAFAS/CFL client enum, not the push channel id.
             "client": {
-                "id": self.config.client_id,
                 "type": self.config.hci_client_type,
-                "name": "campaign",
-                "l": self.config.lang,
+                "id": self.config.client_id,
+                "name": "CFL mobile",
+                "os": "Android 12",
+                "ua": "Dalvik/2.1.0 (Linux; U; Android 12; Pixel 3 Build/SP1A.210812.016.C2)",
                 "v": self.config.hci_client_version,
             },
             "lang": self.config.lang,
