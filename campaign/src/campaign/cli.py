@@ -36,7 +36,7 @@ def _add_hafas_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--channel-id", required=True, help="Channel/client id")
     parser.add_argument("--lang", default="en")
     parser.add_argument("--ver", default="1.16")
-    parser.add_argument("--hci-client-type", default="ANDROID")
+    parser.add_argument("--hci-client-type", default="AND")
     parser.add_argument("--hci-client-version", default="1.0")
     parser.add_argument("--hci-version", default="1.16")
     parser.add_argument("--timeout-sec", type=int, default=30)
